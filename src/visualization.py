@@ -63,144 +63,80 @@ class ClusteringVisualizer:
         # 使用 tab10  colormap (最多 10 个聚类)
         self.colors = plt.cm.tab10(np.linspace(0, 1, self.n_clusters))
     
-    def plot_depth_profile(self, save_path='results/figures/depth_profile.png'):
-        """
-        绘制深度剖面图
-        
-        显示:
-            - 左图：聚类标签 vs 深度散点图
-            - 右图：深度剖面颜色条 (直观显示地层划分)
-        """
-        print("\n[可视化] 绘制深度剖面图...")
-        
-        fig, axes = plt.subplots(1, 2, figsize=(14, 10))
-        
-        # ---------------------------------------------------------------------
-        # 左图：聚类标签 vs 深度散点图
-        # ---------------------------------------------------------------------
-        ax = axes[0]
-        scatter = ax.scatter(
-            self.labels, 
-            self.depth, 
-            c=self.labels, 
-            cmap='tab10', 
-            s=10, 
-            alpha=0.6, 
-            edgecolors='k', 
-            linewidth=0.5
-        )
-        ax.set_xlabel('Cluster Label', fontsize=12)
-        ax.set_ylabel('Depth (m)', fontsize=12)
-        ax.set_title('Clustering Results vs Depth', fontsize=14)
-        ax.invert_yaxis()  # 深度向下增加
-        plt.colorbar(scatter, ax=ax, label='Cluster')
-        ax.grid(True, alpha=0.3)
-        
-        # ---------------------------------------------------------------------
-        # 右图：深度剖面颜色条
-        # ---------------------------------------------------------------------
-        ax = axes[1]
-        
-        # 按深度排序
-        depth_indices = np.argsort(self.depth)
-        depth_sorted = self.depth[depth_indices]
-        labels_sorted = self.labels[depth_indices]
-        
-        # 绘制颜色条
-        for i in range(len(depth_sorted) - 1):
-            ax.axhspan(
-                depth_sorted[i], 
-                depth_sorted[i+1], 
-                color=self.colors[labels_sorted[i]], 
-                alpha=0.7
-            )
-        
-        ax.set_xlim(0, 1)
-        ax.set_ylim(depth_sorted[-1], depth_sorted[0])
-        ax.set_xlabel('Normalized', fontsize=12)
-        ax.set_ylabel('Depth (m)', fontsize=12)
-        ax.set_title('Depth Profile with Clusters', fontsize=14)
-        ax.axis('off')
-        
-        # 添加图例
-        from matplotlib.patches import Patch
-        legend_elements = [
-            Patch(facecolor=self.colors[i], label=f'Cluster {i}') 
-            for i in range(self.n_clusters)
-        ]
-        ax.legend(
-            handles=legend_elements, 
-            loc='upper right', 
-            bbox_to_anchor=(1.3, 1)
-        )
-        
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"      已保存：{save_path}")
-        plt.show()
+    # def plot_depth_profile(self, save_path='results/figures/depth_profile.png'):
+    #     """
+    #     绘制深度剖面图（已删除）
+    #     """
+    #     pass
     
     def plot_feature_distribution(self, save_path='results/figures/feature_distribution.png'):
         """
-        绘制特征分布箱线图
+        绘制特征分布箱线图（优化版）
         
         显示:
             - 每个特征在不同聚类中的分布 (箱线图)
-            - 最多显示 14 个特征
+            - 优化：更大的图、更清晰的标签、更好的颜色
         """
         print("\n[可视化] 绘制特征分布箱线图...")
         
         df = pd.DataFrame(self.features, columns=self.feature_names)
         df['Cluster'] = self.labels
         
-        # 选择部分特征绘制 (最多 14 个)
-        n_features_to_plot = min(14, len(self.feature_names))
-        feature_indices = np.linspace(
-            0, 
-            len(self.feature_names)-1, 
-            n_features_to_plot, 
-            dtype=int
-        )
+        # 只绘制选中的 4 个特征
+        n_features = len(self.feature_names)
         
-        fig, axes = plt.subplots(2, 7, figsize=(20, 8))
+        # 创建更大的图
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
         axes = axes.flatten()
         
-        for idx, feat_idx in enumerate(feature_indices):
-            if idx >= len(axes):
-                break
-            
+        # 使用更专业的配色方案
+        palette = sns.color_palette("husl", self.n_clusters)
+        
+        for idx in range(n_features):
             ax = axes[idx]
-            feat_name = self.feature_names[feat_idx]
+            feat_name = self.feature_names[idx]
             
             # 准备数据
-            data_to_plot = [
-                df[df['Cluster'] == i][feat_name].values 
-                for i in range(self.n_clusters)
-            ]
+            data_to_plot = []
+            cluster_labels = []
+            for i in range(self.n_clusters):
+                cluster_data = df[df['Cluster'] == i][feat_name].values
+                data_to_plot.append(cluster_data)
+                cluster_labels.append(f'Cluster {i}\n(n={len(cluster_data)})')
             
-            # 绘制箱线图
+            # 绘制箱线图（使用更现代的样式）
             bp = ax.boxplot(
                 data_to_plot, 
-                labels=[f'C{i}' for i in range(self.n_clusters)],
-                patch_artist=True
+                labels=cluster_labels,
+                patch_artist=True,
+                widths=0.6,
+                showfliers=False,  # 不显示异常值
+                medianprops=dict(color='black', linewidth=2),  # 中位数线加粗
+                boxprops=dict(linewidth=1.5),
+                whiskerprops=dict(linewidth=1.5),
+                capprops=dict(linewidth=1.5)
             )
             
-            # 设置颜色
-            for patch, color in zip(bp['boxes'], self.colors):
+            # 设置颜色（使用专业配色）
+            for patch, color in zip(bp['boxes'], palette):
                 patch.set_facecolor(color)
+                patch.set_alpha(0.7)
             
-            ax.set_title(feat_name[:20], fontsize=10, rotation=45, ha='right')
-            ax.tick_params(axis='x', rotation=45)
-            ax.grid(True, alpha=0.3)
+            # 添加网格
+            ax.grid(True, alpha=0.3, axis='y', linestyle='--')
+            ax.set_ylabel('Normalized Value', fontsize=11)
+            ax.set_title(feat_name, fontsize=12, fontweight='bold', pad=10)
+            ax.tick_params(axis='x', labelsize=9)
         
         # 隐藏多余的子图
-        for idx in range(len(feature_indices), len(axes)):
+        for idx in range(n_features, len(axes)):
             axes[idx].axis('off')
         
-        plt.suptitle('Feature Distribution by Cluster', fontsize=16, y=1.02)
+        plt.suptitle('Feature Distribution by Cluster (Box Plot)', fontsize=16, fontweight='bold', y=0.995)
         plt.tight_layout()
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"      已保存：{save_path}")
-        plt.show()
+        plt.close()
     
     def plot_pca_scatter(self, save_path='results/figures/pca_scatter.png'):
         """
@@ -243,7 +179,7 @@ class ClusteringVisualizer:
         plt.tight_layout()
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"      已保存：{save_path}")
-        plt.show()
+        plt.close()
     
     def plot_cluster_centers(self, save_path='results/figures/cluster_centers.png'):
         """
@@ -302,42 +238,13 @@ class ClusteringVisualizer:
         plt.tight_layout()
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"      已保存：{save_path}")
-        plt.show()
+        plt.close()
     
-    def plot_correlation_heatmap(self, save_path='results/figures/correlation_heatmap.png'):
-        """
-        绘制特征相关性热图
-        
-        显示特征间的皮尔逊相关系数
-        """
-        print("\n[可视化] 绘制特征相关性热图...")
-        
-        df = pd.DataFrame(self.features, columns=self.feature_names)
-        corr_matrix = df.corr()
-        
-        plt.figure(figsize=(12, 10))
-        
-        # 创建上三角掩码
-        mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
-        
-        # 绘制热图
-        sns.heatmap(
-            corr_matrix, 
-            mask=mask, 
-            annot=False, 
-            fmt='.2f', 
-            cmap='RdBu_r', 
-            center=0, 
-            square=True,
-            linewidths=0.5, 
-            cbar_kws={"shrink": 0.8}
-        )
-        
-        plt.title('Feature Correlation Heatmap', fontsize=14)
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"      已保存：{save_path}")
-        plt.show()
+    # def plot_correlation_heatmap(self, save_path='results/figures/correlation_heatmap.png'):
+    #     """
+    #     绘制特征相关性热图（已删除）
+    #     """
+    #     pass
     
     def plot_optimization_history(self, history, save_path='results/figures/optimization_history.png'):
         """
@@ -356,7 +263,7 @@ class ClusteringVisualizer:
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
         
         # 提取数据（兼容大小写键名）
-        iterations = [h.get('iteration', i+1) for i, h in enumerate(history)]
+        iteration_nums = list(range(1, len(history) + 1))
         uindex_values = [h.get('uindex', h.get('UIndex', 0)) for h in history]
         k_values = [h['K'] for h in history]
         
@@ -365,7 +272,7 @@ class ClusteringVisualizer:
         # ---------------------------------------------------------------------
         ax = axes[0]
         ax.plot(
-            iterations, 
+            iteration_nums, 
             uindex_values, 
             'bo-', 
             linewidth=2, 
@@ -381,7 +288,7 @@ class ClusteringVisualizer:
         # ---------------------------------------------------------------------
         ax = axes[1]
         scatter = ax.scatter(
-            iterations, 
+            iteration_nums, 
             k_values, 
             c=uindex_values, 
             cmap='viridis', 
@@ -398,7 +305,7 @@ class ClusteringVisualizer:
         plt.tight_layout()
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"      已保存：{save_path}")
-        plt.show()
+        plt.close()
     
     def plot_all(self, history=None):
         """
@@ -407,11 +314,11 @@ class ClusteringVisualizer:
         参数:
             history: list, 贝叶斯优化历史记录 (可选)
         """
-        self.plot_depth_profile()
+        # self.plot_depth_profile()  # 已删除
         self.plot_feature_distribution()
         self.plot_pca_scatter()
         self.plot_cluster_centers()
-        self.plot_correlation_heatmap()
+        # self.plot_correlation_heatmap()  # 已删除
         
         if history:
             self.plot_optimization_history(history)

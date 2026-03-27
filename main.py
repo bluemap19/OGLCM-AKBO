@@ -125,15 +125,15 @@ def main():
     print("Step 4: 结果可视化")
     print("="*80)
     
-    # visualizer = ClusteringVisualizer(
-    #     depth=depth,
-    #     features=features_selected,  # 使用选中的特征进行可视化
-    #     labels=labels,
-    #     feature_names=selected_feature_names
-    # )
-    #
-    # # 绘制所有图表
-    # visualizer.plot_all(history=clusterer.optimization_history)
+    visualizer = ClusteringVisualizer(
+        depth=depth,
+        features=features_selected,  # 使用选中的特征进行可视化
+        labels=labels,
+        feature_names=selected_feature_names
+    )
+
+    # 绘制所有图表
+    visualizer.plot_all(history=clusterer.optimization_history)
     
     # ==================== Step 5: 保存结果 ====================
     print("\n" + "="*80)
