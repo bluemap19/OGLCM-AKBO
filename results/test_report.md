@@ -1,70 +1,70 @@
-# OGLCM-AKBO 聚类测试报告
+# OGLCM-AKBO Clustering Test Report
 
-**生成时间：** 2026-03-27T21:20:56.240337
-
----
-
-## 📊 数据概况
-
-| 项目 | 值 |
-|------|-----|
-| **样本数量** | 8265 |
-| **特征数量** | 4 |
-| **深度范围** | 2192.21 - 2402.12 m |
-| **最优聚类数 (K)** | 5 |
+**Generated at:** 2026-03-27T21:20:56.240337
 
 ---
 
-## 🔬 特征选择
+## Data Overview
 
-**选中的重要特征 (共4个):**
-
-| # | 特征名 | 地质意义 |
-|---|--------|----------|
-| 1 | CON_SUB_DYNA | 对比度_子区域_动态 - 反映局部纹理变化强度 |
-| 2 | DIS_SUB_DYNA | 差异性_子区域_动态 - 反映子区域灰度差异 |
-| 3 | HOM_SUB_DYNA | 同质性_子区域_动态 - 反映子区域纹理均匀度 |
-| 4 | ENG_SUB_DYNA | 熵_子区域_动态 - 反映纹理复杂度 |
-
-**特征选择依据:** 基于随机森林特征重要性分析（已在数据预处理阶段完成）
+| Item | Value |
+|------|-------|
+| **Number of samples** | 8265 |
+| **Number of features** | 4 |
+| **Depth range** | 2192.21 - 2402.12 m |
+| **Optimal number of clusters (K)** | 5 |
 
 ---
 
-## 🎯 聚类质量评估
+## Feature Selection
 
-| 指标 | 值 | 说明 | 评价 |
-|------|-----|------|------|
-| **UIndex** | 0.9828 | 综合指标 (越大越好) | ✅ 优秀 |
-| **轮廓系数 (SI)** | 0.4552 | >0.5 表示聚类合理 | ⚠️ 一般 |
-| **DBI** | 0.7643 | <1.0 为好 | ✅ 良好 |
-| **DVI** | 0.2987 | 越大越好 | ⚠️ 较低 |
+**Selected important features (4 total):**
 
-### 聚类质量评价:
+| # | Feature Name | Geological Significance |
+|---|-------------|------------------------|
+| 1 | CON_SUB_DYNA | Contrast_Sub-region_Dynamic - Reflects local texture variation intensity |
+| 2 | DIS_SUB_DYNA | Dissimilarity_Sub-region_Dynamic - Reflects gray-level difference of sub-regions |
+| 3 | HOM_SUB_DYNA | Homogeneity_Sub-region_Dynamic - Reflects texture uniformity of sub-regions |
+| 4 | ENG_SUB_DYNA | Energy_Sub-region_Dynamic - Reflects texture complexity |
 
-**一般 - 聚类结构较弱，建议调整参数**
-
----
-
-## 📈 聚类分布
-
-| 聚类标签 | 样本数 | 占比 (%) | 地质解释推测 |
-|---------|--------|----------|-------------|
-| Cluster 0 | 2629 | 31.8% | 待解释 |
-| Cluster 1 | 951 | 11.5% | 待解释 |
-| Cluster 2 | 1377 | 16.7% | 待解释 |
-| Cluster 3 | 2543 | 30.8% | 待解释 |
-| Cluster 4 | 765 | 9.3% | 待解释 |
+**Feature selection basis:** Based on Random Forest feature importance analysis (completed during data preprocessing)
 
 ---
 
-## 🔄 贝叶斯优化历史（详细迭代记录）
+## Clustering Quality Evaluation
 
-**总迭代次数：** 15 次（包括初始采样和贝叶斯优化）
+| Metric | Value | Description | Evaluation |
+|--------|-------|-------------|------------|
+| **UIndex** | 0.9828 | Composite index (higher is better) | ✅ Excellent |
+| **Silhouette Index (SI)** | 0.4552 | >0.5 indicates reasonable clustering | ⚠️ Fair |
+| **DBI** | 0.7643 | <1.0 is good | ✅ Good |
+| **DVI** | 0.2987 | Higher is better | ⚠️ Low |
 
-### 完整迭代历史
+### Clustering Quality Evaluation:
 
-| 迭代 | K 值 | UIndex | SI | DBI | DVI | 改进 |
-|------|-----|--------|----|----|----|------|
+**Fair - Clustering structure is relatively weak; parameter adjustment recommended**
+
+---
+
+## Clustering Distribution
+
+| Cluster Label | Number of Samples | Percentage (%) | Geological Interpretation (TBD) |
+|--------------|-------------------|----------------|--------------------------------|
+| Cluster 0 | 2629 | 31.8% | TBD |
+| Cluster 1 | 951 | 11.5% | TBD |
+| Cluster 2 | 1377 | 16.7% | TBD |
+| Cluster 3 | 2543 | 30.8% | TBD |
+| Cluster 4 | 765 | 9.3% | TBD |
+
+---
+
+## Bayesian Optimization History (Detailed Iteration Records)
+
+**Total iterations:** 15 (including initial sampling and Bayesian optimization)
+
+### Complete Iteration History
+
+| Iteration | K Value | UIndex | SI | DBI | DVI | Improved |
+|-----------|---------|--------|----|----|----|----------|
 | initial_1 | 14 | 0.8792 | 0.3810 | 0.8305 | 0.2250 | ✅ |
 | initial_2 | 16 | 0.8818 | 0.3793 | 0.8264 | 0.2274 | ✅ |
 | initial_3 | 5 | 0.9828 | 0.4552 | 0.7643 | 0.2987 | ✅ |
@@ -83,32 +83,32 @@
 
 ---
 
-## 📁 输出文件
+## Output Files
 
-1. **聚类结果:** results/clustering_results.csv
-   - DEPTH: 深度
-   - CLUSTER_LABEL: 聚类标签
-   - CLUSTER_X_PROB: 属于各聚类的概率 (基于 GMM 后验概率)
+1. **Clustering results:** results/clustering_results.csv
+   - DEPTH: Depth
+   - CLUSTER_LABEL: Cluster label
+   - CLUSTER_X_PROB: Probability of belonging to each cluster (based on GMM posterior probability)
 
-2. **可视化图:** results/figures/
-   - depth_profile.png: 深度剖面图
-   - feature_distribution.png: 特征分布箱线图
-   - pca_scatter.png: PCA 降维散点图
-   - cluster_centers.png: 聚类中心雷达图
-   - correlation_heatmap.png: 特征相关性热图
+2. **Visualization figures:** results/figures/
+   - depth_profile.png: Depth profile plot
+   - feature_distribution.png: Feature distribution box plot
+   - pca_scatter.png: PCA dimensionality reduction scatter plot
+   - cluster_centers.png: Cluster centers radar chart
+   - correlation_heatmap.png: Feature correlation heatmap
 
-3. **测试报告:** results/test_report.md (本文档)
+3. **Test report:** results/test_report.md (this document)
 
 ---
 
-## ⚙️ 算法参数
+## Algorithm Parameters
 
-| 参数 | 值 |
-|------|-----|
-| K 值搜索范围 | [5, 20] |
-| 初始采样点数 | 5 |
-| 最大迭代次数 | 30 |
-| 收敛等待次数 | 5 |
-| 收敛阈值 | 1e-4 |
+| Parameter | Value |
+|-----------|-------|
+| K value search range | [5, 20] |
+| Number of initial sampling points | 5 |
+| Maximum iterations | 30 |
+| Convergence patience count | 5 |
+| Convergence threshold | 1e-4 |
 
-*报告由 OGLCM-AKBO 算法自动生成*
+*Report automatically generated by OGLCM-AKBO algorithm*

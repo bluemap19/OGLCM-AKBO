@@ -1,15 +1,15 @@
 """
-手动特征选择的数据加载与预处理模块
+Manual Feature Selection Data Loader and Preprocessing Module
 Manual Feature Selection Data Loader and Preprocessing for OGLCM-AKBO
 
-功能:
-    1. 读取 CSV 纹理特征数据
-    2. 根据用户指定的特征列名列表选择数据
-    3. 数据质量检查 (缺失值、异常值)
-    4. 特征标准化 (Z-score)
+Features:
+    1. Read CSV texture feature data
+    2. Select data columns based on user-specified feature name list
+    3. Data quality check (missing values, outliers)
+    4. Feature standardization (Z-score)
 
-作者：基于原版修改
-日期：2026-03-17
+Author: Modified from original version
+Date: 2026-03-17
 """
 
 import pandas as pd
@@ -23,21 +23,21 @@ warnings.filterwarnings('ignore')
 
 class ManualFeaturePreprocessor:
     """
-    手动特征选择预处理器
+    Manual Feature Selection Preprocessor
 
-    属性:
-        scaler: StandardScaler 对象，用于特征标准化
-        imputer: SimpleImputer 对象，用于缺失值填充
-        selected_columns: 用户指定的特征列名列表
+    Attributes:
+        scaler: StandardScaler object for feature standardization
+        imputer: SimpleImputer object for missing value imputation
+        selected_columns: user-specified feature column name list
     """
 
     def __init__(self, feature_columns):
         """
-        初始化预处理器
+        Initialize the preprocessor
 
-        参数:
-            feature_columns: list, 用户指定的特征列名列表
-               例如: ['GLCM_Contrast', 'GLCM_Correlation', 'GLCM_Energy']
+        Parameters:
+            feature_columns: list, user-specified feature column name list
+               e.g.: ['GLCM_Contrast', 'GLCM_Correlation', 'GLCM_Energy']
         """
         self.scaler = StandardScaler()
         self.imputer = SimpleImputer(strategy='mean')
@@ -45,43 +45,45 @@ class ManualFeaturePreprocessor:
 
     def load_and_select_data(self, file_path):
         """
-        加载 CSV 数据并选择指定特征
+        Load CSV data and select specified features
 
-        参数:
-            file_path: CSV 文件路径
+        Parameters:
+            file_path: path to the CSV file
 
-        返回:
-            features: DataFrame, 只包含用户指定特征的数据
+        Returns:
+            features: DataFrame containing only the user-specified features
 
-        异常:
-            ValueError: 如果指定的特征列在数据中不存在
+        Raises:
+            ValueError: if any specified feature column does not exist in the data
         """
-        print(f"[1/4] 正在加载数据：{file_path}")
+        print(f"[1/4] Loading data: {file_path}")
         df = pd.read_csv(file_path)
-        print(f"      原始数据形状：{df.shape}")
-        print(f"      原始数据列名：{df.columns.tolist()}")
+        print(f"      Raw data shape: {df.shape}")
+        print(f"      Raw data columns: {df.columns.tolist()}")
 
-        # 检查所有指定特征列是否存在于数据中
+        # Check that all specified feature columns exist in the data
         missing_columns = [col for col in self.selected_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(f"以下指定特征在数据中不存在: {missing_columns}")
+            raise ValueError(f"The following specified features do not exist in the data: {missing_columns}")
 
-        # 选择用户指定的特征列
+        # Select user-specified feature columns
         features = df[self.selected_columns].copy()
 
-        print(f"      选择的特征数量：{len(self.selected_columns)}")
-        print(f"      选择的特征：{self.selected_columns}")
-        print(f"      处理后的数据形状：{features.shape}")
+        print(f"      Number of selected features: {len(self.selected_columns)}")
+        print(f"      Selected features: {self.selected_columns}")
+        print(f"      Processed data shape: {features.shape}")
 
         return features
 
     def check_data_quality(self, features):
         """
-        数据质量检查（仅在用户指定的特征上进行）
-        参数:
-            features: DataFrame, 特征数据
-        返回:
-            report: dict, 质量检查报告
+        Data quality check (performed only on user-specified features)
+
+        Parameters:
+            features: DataFrame, feature data
+
+        Returns:
+            report: dict, quality check report
         """
         report = {
             'missing_values': int(features.isnull().sum().sum()),
@@ -91,13 +93,13 @@ class ManualFeaturePreprocessor:
             'feature_statistics': {}
         }
 
-        # 检查零方差特征
+        # Check for zero-variance features
         for col in features.columns:
             std_val = features[col].std()
             if std_val < 1e-10:
                 report['zero_variance'].append(col)
 
-            # 记录每个特征的基本统计信息
+            # Record basic statistics for each feature
             report['feature_statistics'][col] = {
                 'mean': float(features[col].mean()),
                 'std': float(std_val),
@@ -106,12 +108,12 @@ class ManualFeaturePreprocessor:
                 'missing': int(features[col].isnull().sum())
             }
 
-        # 检查异常值 (3σ原则)
+        # Check for outliers (3-sigma rule)
         total_outliers = 0
         for col in features.columns:
             mean = features[col].mean()
             std = features[col].std()
-            if std > 1e-10:  # 避免除零
+            if std > 1e-10:  # avoid division by zero
                 outliers = ((features[col] < mean - 3*std) | (features[col] > mean + 3*std)).sum()
                 if outliers > 0:
                     report['outliers'][col] = {
@@ -120,112 +122,112 @@ class ManualFeaturePreprocessor:
                     }
                     total_outliers += outliers
 
-        print("[2/4] 数据质量检查（基于选定特征）")
-        print(f"      缺失值总数：{report['missing_values']}")
-        print(f"      零方差特征：{len(report['zero_variance'])} 个")
+        print("[2/4] Data quality check (based on selected features)")
+        print(f"      Total missing values: {report['missing_values']}")
+        print(f"      Zero-variance features: {len(report['zero_variance'])}")
         if report['zero_variance']:
-            print(f"      零方差特征列表：{report['zero_variance']}")
-        print(f"      异常值总数：{total_outliers}")
+            print(f"      Zero-variance feature list: {report['zero_variance']}")
+        print(f"      Total outliers: {total_outliers}")
 
-        # 打印每个特征的缺失值情况
-        print("\n      各特征缺失值统计:")
+        # Print missing value statistics per feature
+        print("\n      Missing value statistics per feature:")
         for col in features.columns:
             missing_count = features[col].isnull().sum()
             if missing_count > 0:
-                print(f"        {col}: {missing_count} 个缺失值 ({missing_count/len(features)*100:.1f}%)")
+                print(f"        {col}: {missing_count} missing values ({missing_count/len(features)*100:.1f}%)")
 
         return report
 
     def preprocess(self, features, handle_outliers=True, sigma_threshold=2.0):
         """
-        数据预处理
+        Data preprocessing
 
-        参数:
-            features: DataFrame, 特征数据
-            handle_outliers: bool, 是否处理异常值
-            sigma_threshold: float, 异常值处理的σ阈值
+        Parameters:
+            features: DataFrame, feature data
+            handle_outliers: bool, whether to handle outliers
+            sigma_threshold: float, sigma threshold for outlier handling
 
-        返回:
-            features_scaled: ndarray, 标准化后的特征
+        Returns:
+            features_scaled: ndarray, standardized features
         """
-        # 1. 处理缺失值
-        print("[3/4] 数据预处理")
-        print("      - 处理缺失值（均值填充）...")
+        # 1. Handle missing values
+        print("[3/4] Data preprocessing")
+        print("      - Handling missing values (mean imputation)...")
         features_imputed = self.imputer.fit_transform(features)
         features_df = pd.DataFrame(features_imputed, columns=features.columns)
 
-        # 2. 处理异常值 (σ截断法)
+        # 2. Handle outliers (sigma clipping)
         if handle_outliers:
-            print(f"      - 处理异常值 ({sigma_threshold}σ截断)...")
+            print(f"      - Handling outliers ({sigma_threshold}-sigma clipping)...")
             for col in features_df.columns:
                 mean = features_df[col].mean()
                 std = features_df[col].std()
-                if std > 1e-10:  # 避免除零
+                if std > 1e-10:  # avoid division by zero
                     lower = mean - sigma_threshold * std
                     upper = mean + sigma_threshold * std
                     features_df[col] = features_df[col].clip(lower, upper)
 
-        # 3. 特征标准化 (Z-score)
-        print("      - 特征标准化 (Z-score)...")
+        # 3. Feature standardization (Z-score)
+        print("      - Feature standardization (Z-score)...")
         features_scaled = self.scaler.fit_transform(features_df)
 
-        # 打印标准化后的统计信息
+        # Print post-standardization statistics
         features_scaled_df = pd.DataFrame(features_scaled, columns=features.columns)
-        print("\n      标准化后统计:")
-        print(f"        整体均值：{features_scaled.mean():.2e}")
-        print(f"        整体方差：{features_scaled.var():.2e}")
+        print("\n      Post-standardization statistics:")
+        print(f"        Overall mean: {features_scaled.mean():.2e}")
+        print(f"        Overall variance: {features_scaled.var():.2e}")
 
-        print("\n      各特征标准化后统计:")
+        print("\n      Per-feature post-standardization statistics:")
         for i, col in enumerate(features.columns):
             col_mean = features_scaled_df[col].mean()
             col_std = features_scaled_df[col].std()
-            print(f"        {col}: 均值={col_mean:.3f}, 标准差={col_std:.3f}")
+            print(f"        {col}: mean={col_mean:.3f}, std={col_std:.3f}")
 
         return features_scaled
 
     def fit_transform(self, file_path, handle_outliers=True, sigma_threshold=2.0):
         """
-        完整预处理流程
+        Complete preprocessing pipeline
 
-        参数:
-            file_path: CSV 文件路径
-            handle_outliers: bool, 是否处理异常值
-            sigma_threshold: float, 异常值处理的σ阈值
+        Parameters:
+            file_path: path to the CSV file
+            handle_outliers: bool, whether to handle outliers
+            sigma_threshold: float, sigma threshold for outlier handling
 
-        返回:
-            features_scaled: ndarray, 标准化后的特征
-            quality_report: dict, 质量检查报告
+        Returns:
+            features_scaled: ndarray, standardized features
+            quality_report: dict, quality check report
         """
-        # 加载并选择数据
+        # Load and select data
         features = self.load_and_select_data(file_path)
 
-        # 质量检查
+        # Quality check
         quality_report = self.check_data_quality(features)
 
-        # 预处理
+        # Preprocessing
         features_scaled = self.preprocess(features, handle_outliers, sigma_threshold)
 
-        print(f"\n[OK] 数据预处理完成")
-        print(f"      输入特征: {len(self.selected_columns)} 个")
-        print(f"      输出形状: {features_scaled.shape}")
+        print(f"\n[OK] Data preprocessing complete")
+        print(f"      Input features: {len(self.selected_columns)}")
+        print(f"      Output shape: {features_scaled.shape}")
 
         return features_scaled, quality_report
 
 
 def load_and_preprocess_manual(file_path, feature_columns, handle_outliers=True, sigma_threshold=2.0):
     """
-    手动特征选择的数据加载和预处理便捷函数
+    Convenience function for manual feature selection data loading and preprocessing
 
-    参数:
-        file_path: CSV 文件路径
-        feature_columns: list, 用户指定的特征列名列表
-        handle_outliers: bool, 是否处理异常值
-        sigma_threshold: float, 异常值处理的σ阈值
+    Parameters:
+        file_path: path to the CSV file
+        feature_columns: list, user-specified feature column name list
+        handle_outliers: bool, whether to handle outliers
+        sigma_threshold: float, sigma threshold for outlier handling
 
-    返回:
-        features: ndarray, 标准化后的特征
-        preprocessor: ManualFeaturePreprocessor, 预处理器对象
-        report: dict, 质量检查报告
+    Returns:
+        features: ndarray, standardized features
+        preprocessor: ManualFeaturePreprocessor, preprocessor object
+        report: dict, quality check report
     """
     preprocessor = ManualFeaturePreprocessor(feature_columns)
     features, report = preprocessor.fit_transform(file_path, handle_outliers, sigma_threshold)
@@ -234,16 +236,16 @@ def load_and_preprocess_manual(file_path, feature_columns, handle_outliers=True,
 
 
 if __name__ == "__main__":
-    # 测试示例
+    # Test example
     file_path = r"C:\Users\Maple\.openclaw\workspace\OGLCM-AKBO\TZ1H_texture_logging.csv"
 
-    # 用户手动指定要使用的特征
+    # User manually specifies features to use
     selected_features = ['CON_SUB_DYNA', 'DIS_SUB_DYNA', 'HOM_SUB_DYNA', 'ENG_SUB_DYNA']
 
     print("="*80)
-    print("手动特征选择数据预处理器测试")
+    print("Manual Feature Selection Data Preprocessor Test")
     print("="*80)
-    print(f"指定特征: {selected_features}")
+    print(f"Specified features: {selected_features}")
     print("="*80)
 
     try:
@@ -255,11 +257,11 @@ if __name__ == "__main__":
         )
 
         print("\n" + "="*80)
-        print("预处理结果:")
-        print(f"  特征数据形状：{features.shape}")
-        print(f"  使用的特征：{preprocessor.selected_columns}")
+        print("Preprocessing results:")
+        print(f"  Feature data shape: {features.shape}")
+        print(f"  Features used: {preprocessor.selected_columns}")
         print("="*80)
 
     except ValueError as e:
-        print(f"错误: {e}")
-        print("请检查指定的特征列名是否在数据中存在。")
+        print(f"Error: {e}")
+        print("Please check that the specified feature column names exist in the data.")

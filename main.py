@@ -1,22 +1,24 @@
 """
-OGLCM-AKBO 无监督聚类算法主程序
+OGLCM-AKBO Unsupervised Clustering Main Program
+
 Main Program for OGLCM-AKBO Unsupervised Clustering
 
-基于定向灰度共生矩阵 (OGLCM) 与贝叶斯优化自适配 K-means (AKBO)
-的页岩微相自动表征方法
+Automatic shale microfacies characterization method based on
+Orientational Gray-Level Co-occurrence Matrix (OGLCM) and
+Auto-Kmeans with Bayesian Optimization (AKBO)
 
-输入：
-    - TZ1H_texture_logging.csv: 纹理特征数据 (28 个 OGLCM 特征)
+Input:
+    - TZ1H_texture_logging.csv: Texture feature data (28 OGLCM features)
 
-输出：
-    - results/clustering_results.csv: 聚类结果
-    - results/clustering_metrics.json: 评估指标
-    - results/figures/*.png: 可视化图
-    - results/test_report.md: 测试报告
+Output:
+    - results/clustering_results.csv: Clustering results
+    - results/clustering_metrics.json: Evaluation metrics
+    - results/figures/*.png: Visualization figures
+    - results/test_report.md: Test report
 
-作者：Doctor (Fuhao Zhang) & Cuka
-日期：2026-03-17
-版本：2.0 (添加特征选择，使用 4 个重要特征)
+Authors: Doctor (Fuhao Zhang) & Cuka
+Date: 2026-03-17
+Version: 2.0 (Added feature selection, using 4 important features)
 """
 
 import os
@@ -26,7 +28,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-# 添加 src 目录到路径
+# Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.data_loader import load_and_preprocess_manual
@@ -36,126 +38,126 @@ from src.visualization import ClusteringVisualizer
 
 def main():
     """
-    主函数
-    
-    流程:
-        1. 数据加载与预处理
-        2. 特征选择 (使用 4 个重要纹理特征)
-        3. AKBO 聚类优化
-        4. 结果可视化
-        5. 保存结果
+    Main function
+
+    Pipeline:
+        1. Data loading and preprocessing
+        2. Feature selection (using 4 important texture features)
+        3. AKBO clustering optimization
+        4. Results visualization
+        5. Save results
     """
-    
+
     print("="*80)
-    print("OGLCM-AKBO 无监督聚类算法")
-    print("基于定向灰度共生矩阵与贝叶斯优化自适配 K-means")
+    print("OGLCM-AKBO Unsupervised Clustering Algorithm")
+    print("Based on Orientational Gray-Level Co-occurrence Matrix and Bayesian Optimization Auto-Kmeans")
     print("="*80)
-    print(f"开始时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    
-    # ==================== Step 1: 数据加载与预处理 ====================
+    print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+
+    # ==================== Step 1: Data Loading and Preprocessing ====================
     print("="*80)
-    print("Step 1: 数据加载与预处理")
+    print("Step 1: Data Loading and Preprocessing")
     print("="*80)
-    
+
     data_file = r"C:\Users\Maple\.openclaw\workspace\OGLCM-AKBO\TZ1H_texture_logging.csv"
-    
-    # 预设的 4 个最优特征
+
+    # Preselected 4 optimal features
     selected_features = [
         'CON_SUB_DYNA',
         'DIS_SUB_DYNA',
         'HOM_SUB_DYNA',
         'ENG_SUB_DYNA'
     ]
-    
-    # 加载数据并预处理 (自动选择指定特征)
+
+    # Load data and preprocess (auto-select specified features)
     features, preprocessor, quality_report = load_and_preprocess_manual(
         data_file,
         feature_columns=selected_features
     )
-    
-    # 读取深度数据
+
+    # Read depth data
     import pandas as pd
     df = pd.read_csv(data_file)
     depth = df['DEPTH'].values
-    
-    print(f"\n[OK] 数据加载完成")
-    print(f"  - 样本数：{len(depth)}")
-    print(f"  - 特征数：{features.shape[1]}")
-    print(f"  - 深度范围：{depth.min():.2f} - {depth.max():.2f} m")
-    
-    # ==================== Step 2: 确认使用的特征 ====================
+
+    print(f"\n[OK] Data loading complete")
+    print(f"  - Number of samples: {len(depth)}")
+    print(f"  - Number of features: {features.shape[1]}")
+    print(f"  - Depth range: {depth.min():.2f} - {depth.max():.2f} m")
+
+    # ==================== Step 2: Confirm Selected Features ====================
     print("\n" + "="*80)
-    print("Step 2: 确认使用的特征")
+    print("Step 2: Confirm Selected Features")
     print("="*80)
-    
-    # 特征已在数据预处理阶段选择完成
+
+    # Features already selected during data preprocessing
     selected_feature_names = preprocessor.selected_columns
     selected_indices = list(range(len(selected_feature_names)))
-    features_selected = features  # 已经是选择后的特征
-    
-    print(f"\n使用预设的 {len(selected_indices)} 个最优特征:")
+    features_selected = features  # Already selected features
+
+    print(f"\nUsing preset {len(selected_indices)} optimal features:")
     for i, name in enumerate(selected_feature_names):
         print(f"  {i+1}. {name}")
-    
-    # ==================== Step 3: AKBO 聚类优化 ====================
+
+    # ==================== Step 3: AKBO Clustering Optimization ====================
     print("\n" + "="*80)
-    print("Step 3: AKBO 聚类优化")
+    print("Step 3: AKBO Clustering Optimization")
     print("="*80)
-    
-    # 创建聚类器
+
+    # Create clusterer
     clusterer = AKBOClusterer(
-        k_range=(5, 20),    # K 值搜索范围
-        n_init=8,           # 初始采样点数
-        max_iter=30,        # 最大迭代次数
-        n_patience=8,       # 收敛等待次数
-        tol=1e-4,           # 收敛阈值
-        random_state=42     # 随机种子
+        k_range=(5, 20),    # K value search range
+        n_init=8,           # Number of initial sampling points
+        max_iter=30,        # Maximum number of iterations
+        n_patience=8,      # Convergence patience count
+        tol=1e-4,           # Convergence threshold
+        random_state=42     # Random seed
     )
-    
-    # 执行优化 (使用指定的特征索引)
+
+    # Execute optimization (using specified feature indices)
     optimal_k = clusterer.optimize(
         features,
         feature_names=selected_feature_names,
         selected_indices=selected_indices,
     )
     labels = clusterer.fit(features_selected)
-    
-    # ==================== Step 4: 结果可视化 ====================
+
+    # ==================== Step 4: Results Visualization ====================
     print("\n" + "="*80)
-    print("Step 4: 结果可视化")
+    print("Step 4: Results Visualization")
     print("="*80)
-    
+
     visualizer = ClusteringVisualizer(
         depth=depth,
-        features=features_selected,  # 使用选中的特征进行可视化
+        features=features_selected,  # Use selected features for visualization
         labels=labels,
         feature_names=selected_feature_names
     )
 
-    # 绘制所有图表
+    # Plot all figures
     visualizer.plot_all(history=clusterer.optimization_history)
-    
-    # ==================== Step 5: 保存结果 ====================
+
+    # ==================== Step 5: Save Results ====================
     print("\n" + "="*80)
-    print("Step 5: 保存结果")
+    print("Step 5: Save Results")
     print("="*80)
-    
-    # 1. 保存聚类结果
+
+    # 1. Save clustering results
     results_df = pd.DataFrame({
         'DEPTH': depth,
         'CLUSTER_LABEL': labels
     })
-    
-    # 添加聚类概率 (基于 GMM 后验概率)
+
+    # Add clustering probability (based on GMM posterior probability)
     probs = clusterer.get_cluster_probs(features_selected)
     for i in range(probs.shape[1]):
         results_df[f'CLUSTER_{i}_PROB'] = probs[:, i]
-    
+
     results_file = 'results/clustering_results.csv'
     results_df.to_csv(results_file, index=False)
-    print(f"[OK] 聚类结果已保存：{results_file}")
-    
-    # 2. 生成测试报告（包含详细迭代历史）
+    print(f"[OK] Clustering results saved: {results_file}")
+
+    # 2. Generate test report (with detailed iteration history)
     generate_test_report(
         optimal_k=optimal_k,
         n_samples=len(depth),
@@ -167,123 +169,123 @@ def main():
         optimization_history=clusterer.optimization_history,
         results_file=results_file
     )
-    
-    # ==================== 完成 ====================
+
+    # ==================== Complete ====================
     print("\n" + "="*80)
-    print("[OK] 所有任务完成!")
+    print("[OK] All tasks completed!")
     print("="*80)
-    print(f"结束时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"\n输出文件:")
-    print(f"  1. 聚类结果：{results_file}")
-    print(f"  2. 可视化图：results/figures/")
-    print(f"  3. 测试报告：results/test_report.md (包含详细迭代历史)")
-    
+    print(f"End time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\nOutput files:")
+    print(f"  1. Clustering results: {results_file}")
+    print(f"  2. Visualization figures: results/figures/")
+    print(f"  3. Test report: results/test_report.md (with detailed iteration history)")
+
     return results_df, clusterer
 
 
-def generate_test_report(optimal_k, n_samples, n_features, selected_features, 
-                         depth_range, best_metrics, cluster_distribution, 
+def generate_test_report(optimal_k, n_samples, n_features, selected_features,
+                         depth_range, best_metrics, cluster_distribution,
                          optimization_history, results_file):
     """
-    生成测试报告（包含详细迭代历史）
-    
-    参数:
-        optimal_k: int, 最优 K 值
-        n_samples: int, 样本数
-        n_features: int, 特征数
-        selected_features: list, 特征名称
-        depth_range: list, 深度范围
-        best_metrics: dict, 最优指标
-        cluster_distribution: dict, 聚类分布
-        optimization_history: list, 优化历史
-        results_file: str, 结果文件路径
+    Generate test report (with detailed iteration history)
+
+    Parameters:
+        optimal_k: int, optimal K value
+        n_samples: int, number of samples
+        n_features: int, number of features
+        selected_features: list, feature names
+        depth_range: list, depth range
+        best_metrics: dict, best metrics
+        cluster_distribution: dict, clustering distribution
+        optimization_history: list, optimization history
+        results_file: str, results file path
     """
-    
-    # 质量评价
+
+    # Quality evaluation
     sil = best_metrics['si']
     if sil > 0.7:
-        quality_rating = "优秀 - 聚类结构清晰，分离度好"
+        quality_rating = "Excellent - Clustering structure is clear with good separation"
     elif sil > 0.5:
-        quality_rating = "良好 - 聚类结构合理，可以接受"
+        quality_rating = "Good - Clustering structure is reasonable, acceptable"
     elif sil > 0.25:
-        quality_rating = "一般 - 聚类结构较弱，建议调整参数"
+        quality_rating = "Fair - Clustering structure is weak, parameter adjustment recommended"
     else:
-        quality_rating = "较差 - 聚类结构不明显，需要重新考虑"
-    
+        quality_rating = "Poor - Clustering structure is not obvious, need to reconsider"
+
     from datetime import datetime
     timestamp = datetime.now().isoformat()
-    
-    report = f"""# OGLCM-AKBO 聚类测试报告
 
-**生成时间：** {timestamp}
+    report = f"""# OGLCM-AKBO Clustering Test Report
+
+**Generated at:** {timestamp}
 
 ---
 
-## 📊 数据概况
+## Data Overview
 
-| 项目 | 值 |
+| Item | Value |
 |------|-----|
-| **样本数量** | {n_samples} |
-| **特征数量** | {n_features} |
-| **深度范围** | {depth_range[0]:.2f} - {depth_range[1]:.2f} m |
-| **最优聚类数 (K)** | {optimal_k} |
+| **Number of samples** | {n_samples} |
+| **Number of features** | {n_features} |
+| **Depth range** | {depth_range[0]:.2f} - {depth_range[1]:.2f} m |
+| **Optimal number of clusters (K)** | {optimal_k} |
 
 ---
 
-## 🔬 特征选择
+## Feature Selection
 
-**选中的重要特征 (共{len(selected_features)}个):**
+**Selected important features ({len(selected_features)} total):**
 
-| # | 特征名 | 地质意义 |
+| # | Feature Name | Geological Significance |
 |---|--------|----------|
-| 1 | {selected_features[0]} | 对比度_子区域_动态 - 反映局部纹理变化强度 |
-| 2 | {selected_features[1]} | 差异性_子区域_动态 - 反映子区域灰度差异 |
-| 3 | {selected_features[2]} | 同质性_子区域_动态 - 反映子区域纹理均匀度 |
-| 4 | {selected_features[3]} | 熵_子区域_动态 - 反映纹理复杂度 |
+| 1 | {selected_features[0]} | Contrast_sub-region_dynamic - Reflects local texture variation intensity |
+| 2 | {selected_features[1]} | Dissimilarity_sub-region_dynamic - Reflects gray-level difference of sub-regions |
+| 3 | {selected_features[2]} | Homogeneity_sub-region_dynamic - Reflects texture uniformity of sub-regions |
+| 4 | {selected_features[3]} | Entropy_sub-region_dynamic - Reflects texture complexity |
 
-**特征选择依据:** 基于随机森林特征重要性分析（已在数据预处理阶段完成）
+**Feature selection basis:** Based on Random Forest feature importance analysis (completed during data preprocessing)
 
 ---
 
-## 🎯 聚类质量评估
+## Clustering Quality Evaluation
 
-| 指标 | 值 | 说明 | 评价 |
+| Metric | Value | Description | Evaluation |
 |------|-----|------|------|
-| **UIndex** | {best_metrics['uindex']:.4f} | 综合指标 (越大越好) | {'✅ 优秀' if best_metrics['uindex'] > 0.5 else '⚠️ 需改进'} |
-| **轮廓系数 (SI)** | {best_metrics['si']:.4f} | >0.5 表示聚类合理 | {'✅ 良好' if best_metrics['si'] > 0.5 else '⚠️ 一般'} |
-| **DBI** | {best_metrics['dbi']:.4f} | <1.0 为好 | {'✅ 良好' if best_metrics['dbi'] < 1.0 else '⚠️ 需改进'} |
-| **DVI** | {best_metrics['dvi']:.4f} | 越大越好 | {'✅ 良好' if best_metrics['dvi'] > 0.5 else '⚠️ 较低'} |
+| **UIndex** | {best_metrics['uindex']:.4f} | Composite index (higher is better) | {'Excellent' if best_metrics['uindex'] > 0.5 else 'Needs improvement'} |
+| **Silhouette Index (SI)** | {best_metrics['si']:.4f} | >0.5 indicates reasonable clustering | {'Good' if best_metrics['si'] > 0.5 else 'Fair'} |
+| **DBI** | {best_metrics['dbi']:.4f} | <1.0 is good | {'Good' if best_metrics['dbi'] < 1.0 else 'Needs improvement'} |
+| **DVI** | {best_metrics['dvi']:.4f} | Higher is better | {'Good' if best_metrics['dvi'] > 0.5 else 'Low'} |
 
-### 聚类质量评价:
+### Clustering Quality Evaluation:
 
 **{quality_rating}**
 
 ---
 
-## 📈 聚类分布
+## Clustering Distribution
 
-| 聚类标签 | 样本数 | 占比 (%) | 地质解释推测 |
+| Cluster Label | Number of Samples | Percentage (%) | Geological Interpretation (TBD) |
 |---------|--------|----------|-------------|
 """
-    
+
     for i in range(optimal_k):
         count = cluster_distribution[f'cluster_{i}']
         percentage = count / n_samples * 100
-        report += f"| Cluster {i} | {count} | {percentage:.1f}% | 待解释 |\n"
-    
+        report += f"| Cluster {i} | {count} | {percentage:.1f}% | TBD |\n"
+
     report += f"""
 ---
 
-## 🔄 贝叶斯优化历史（详细迭代记录）
+## Bayesian Optimization History (Detailed Iteration Records)
 
-**总迭代次数：** {len(optimization_history)} 次（包括初始采样和贝叶斯优化）
+**Total iterations:** {len(optimization_history)} (including initial sampling and Bayesian optimization)
 
-### 完整迭代历史
+### Complete Iteration History
 
-| 迭代 | K 值 | UIndex | SI | DBI | DVI | 改进 |
+| Iteration | K Value | UIndex | SI | DBI | DVI | Improved |
 |------|-----|--------|----|----|----|------|
 """
-    
+
     for record in optimization_history:
         iteration = record['iteration']
         k = record['K']
@@ -291,54 +293,54 @@ def generate_test_report(optimal_k, n_samples, n_features, selected_features,
         si = record['SI']
         dbi = record['DBI']
         dvi = record['DVI']
-        improved = '✅' if record['improved'] else '❌'
+        improved = 'Yes' if record['improved'] else 'No'
         report += f"| {iteration} | {k} | {uindex:.4f} | {si:.4f} | {dbi:.4f} | {dvi:.4f} | {improved} |\n"
-    
+
     report += f"""
 ---
 
-## 📁 输出文件
+## Output Files
 
-1. **聚类结果:** {results_file}
-   - DEPTH: 深度
-   - CLUSTER_LABEL: 聚类标签
-   - CLUSTER_X_PROB: 属于各聚类的概率 (基于 GMM 后验概率)
+1. **Clustering results:** {results_file}
+   - DEPTH: Depth
+   - CLUSTER_LABEL: Cluster label
+   - CLUSTER_X_PROB: Probability of belonging to each cluster (based on GMM posterior probability)
 
-2. **可视化图:** results/figures/
-   - depth_profile.png: 深度剖面图
-   - feature_distribution.png: 特征分布箱线图
-   - pca_scatter.png: PCA 降维散点图
-   - cluster_centers.png: 聚类中心雷达图
-   - correlation_heatmap.png: 特征相关性热图
+2. **Visualization figures:** results/figures/
+   - depth_profile.png: Depth profile plot
+   - feature_distribution.png: Feature distribution box plot
+   - pca_scatter.png: PCA dimensionality reduction scatter plot
+   - cluster_centers.png: Cluster centers radar chart
+   - correlation_heatmap.png: Feature correlation heatmap
 
-3. **测试报告:** results/test_report.md (本文档)
+3. **Test report:** results/test_report.md (this document)
 
 ---
 
-## ⚙️ 算法参数
+## Algorithm Parameters
 
-| 参数 | 值 |
+| Parameter | Value |
 |------|-----|
-| K 值搜索范围 | [5, 20] |
-| 初始采样点数 | 5 |
-| 最大迭代次数 | 30 |
-| 收敛等待次数 | 5 |
-| 收敛阈值 | 1e-4 |
+| K value search range | [5, 20] |
+| Number of initial sampling points | 5 |
+| Maximum iterations | 30 |
+| Convergence patience count | 5 |
+| Convergence threshold | 1e-4 |
 
-*报告由 OGLCM-AKBO 算法自动生成*
+*Report automatically generated by OGLCM-AKBO algorithm*
 """
-    
-    # 保存报告
+
+    # Save report
     report_file = 'results/test_report.md'
     with open(report_file, 'w', encoding='utf-8') as f:
         f.write(report)
-    
-    print(f"[OK] 测试报告已保存：{report_file}")
+
+    print(f"[OK] Test report saved: {report_file}")
 
 
 if __name__ == "__main__":
-    # 确保结果目录存在
+    # Ensure results directory exists
     os.makedirs('results/figures', exist_ok=True)
-    
-    # 运行主程序
+
+    # Run main program
     results, clusterer = main()
